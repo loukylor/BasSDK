@@ -138,7 +138,7 @@ namespace ThunderRoad
                     .Select(part => templateToCreatedParts[part])
                     .ToList();
 
-                part.sliceFillMaterial = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Diffuse.mat");
+                part.sliceFillMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/SDK/Examples/Reveal/Slice.mat");
                 if (part.sliceChildAndDisableSelf != null)
                     part.sliceChildAndDisableSelf = templateToCreatedParts[part.sliceChildAndDisableSelf];
 
