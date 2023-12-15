@@ -187,12 +187,29 @@ namespace ThunderRoad
 
             Transform eye = animator.GetBoneTransform(HumanBodyBones.LeftEye);
             if (eye != null)
-                res.Add(eye.gameObject.AddComponent<CreatureEye>());
+            {
+                CreatureEye eyeComponent = eye.gameObject.AddComponent<CreatureEye>();
+                eyeComponent.eyeTag = "Left";
+                res.Add(eyeComponent);
+
+                Transform forwardTransform = new GameObject("ForwardTransform").transform;
+                forwardTransform.position = eye.position;
+                forwardTransform.parent = eye;
+                forwardTransform.rotation = animator.transform.rotation;
+            }
 
             eye = animator.GetBoneTransform(HumanBodyBones.RightEye);
             if (eye != null)
-                res.Add(eye.gameObject.AddComponent<CreatureEye>());
+            {
+                CreatureEye eyeComponent = eye.gameObject.AddComponent<CreatureEye>();
+                eyeComponent.eyeTag = "Right";
+                res.Add(eyeComponent);
 
+                Transform forwardTransform = new GameObject("ForwardTransform").transform;
+                forwardTransform.position = eye.position;
+                forwardTransform.parent = eye;
+                forwardTransform.rotation = animator.transform.rotation;
+            }
             return res;
         }
 
