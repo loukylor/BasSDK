@@ -86,7 +86,7 @@ namespace ThunderRoad
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
                 GUIStyle style = new(GUI.skin.label) { wordWrap = true };
-                foreach (Error error in errors)
+                foreach (Error error in errors.OrderByDescending((err) => err.level))
                 {
                     Texture2D icon = error.level switch
                     {
