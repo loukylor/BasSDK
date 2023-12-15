@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -104,8 +105,8 @@ namespace ThunderRoad
                         GUILayout.Label(label, style);
 
                         // I have spent too long trying to center this damn button
-                        if (error.autoFix != null)
-                            GUILayout.Button("Auto Fix", GUILayout.ExpandWidth(false));
+                        if (error.autoFix != null && GUILayout.Button("Auto Fix", GUILayout.ExpandWidth(false)))
+                            error.autoFix.Invoke();
                     }
                 }
             }
@@ -200,7 +201,7 @@ namespace ThunderRoad
                     return true;
                 }
                 if (!CheckChildrenScale(animator.transform))
-                    errors.Add(new Error(MessageType.Warning, "Non default scale detected on bones. Ensure the scale on all bones is (1, 1, 1)."));
+                    errors.Add(new Error(MessageType.Error, "Non default scale detected on bones. Ensure the scale on all bones is (1, 1, 1)."));
             }
 
             foreach (SkinnedMeshRenderer renderer in creatureRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true))
@@ -221,13 +222,31 @@ namespace ThunderRoad
                     ));
                 }
 
-                foreach (Material material in renderer.sharedMaterials)
+                for (int i = 0; i < renderer.sharedMaterials.Length; i++)
                 {
-                    if (!material.HasTexture("_RevealMask"))
+                    if (!renderer.sharedMaterials[i].HasTexture("_RevealMask"))
+                    {
+                        // TODO: I have no idea why but this just doesn't set materials properly on prefabs
+                        int j = i;
                         errors.Add(new Error(
                             MessageType.Warning,
-                            $"Material \"{material.name}\" does not have a \"_RevealMask\" property. Without it, decals will not function. If unsure how to fix, use the \"ThunderRoad/Lit\" shader on your materials."
+                            $"Material \"{renderer.sharedMaterials[i].name}\" does not have a \"_RevealMask\" property. Without it, decals will not function. If unsure how to fix, use the \"ThunderRoad/Lit\" shader on your materials.",
+                            () => {
+                                Material[] newMats = renderer.sharedMaterials;
+                                Material newMat = new(Shader.Find("ThunderRoad/Lit"));
+                                newMat.CopyPropertiesFromMaterial(renderer.sharedMaterials[j]);
+                                newMats[j] = newMat;
+
+                                string path = Path.Combine(
+                                    "Assets", 
+                                    creatorConfig.saveLocation, 
+                                    renderer.sharedMaterials[j].name + ".mat"
+                                );
+                                AssetDatabase.CreateAsset(newMat, path);
+                                renderer.sharedMaterials = newMats;
+                            }
                         ));
+                    }
                 }
             }
         }
