@@ -21,6 +21,7 @@ namespace ThunderRoad
         public SerializedProperty creatorConfigProp;
         public SerializedProperty saveLocationProp;
         public SerializedProperty idProp;
+        public SerializedProperty createWaveProp;
         public SerializedProperty addressableAssetsGroupProp;
         public SerializedProperty addEyeComponentsProp;
         public SerializedProperty animatorAddressProp;
@@ -46,6 +47,7 @@ namespace ThunderRoad
                 saveLocationProp = creatorConfigProp.FindPropertyRelative(nameof(creatorConfig.saveLocation));
                 idProp = creatorConfigProp.FindPropertyRelative(nameof(creatorConfig.id));
                 addressableAssetsGroupProp = creatorConfigProp.FindPropertyRelative(nameof(creatorConfig.addressableAssetGroup));
+                createWaveProp = creatorConfigProp.FindPropertyRelative(nameof(creatorConfig.createWave));
                 addEyeComponentsProp = creatorConfigProp.FindPropertyRelative(nameof(creatorConfig.addEyeComponents));
                 animatorAddressProp = creatorConfigProp.FindPropertyRelative(nameof(creatorConfig.animatorAddress));
                 hasSeparateNameAndIDProp = creatorConfigProp.FindPropertyRelative(nameof(creatorConfig.hasSeparateNameAndID));
@@ -124,6 +126,7 @@ namespace ThunderRoad
             EditorGUILayout.PropertyField(saveLocationProp);
             EditorGUILayout.PropertyField(idProp, new GUIContent("Creature ID"));
             EditorGUILayout.PropertyField(addressableAssetsGroupProp);
+            EditorGUILayout.PropertyField(createWaveProp);
             if (advancedFoldout = EditorGUILayout.Foldout(advancedFoldout, "Advanced (all optional)", true))
             {
                 EditorGUI.indentLevel++;

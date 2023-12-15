@@ -26,7 +26,7 @@ namespace ThunderRoad
             GameObject creatureMesh = UnityEngine.Object.Instantiate(creatureBase);
             GameObject creatureRoot = new(creatureBase.name);
             Undo.RegisterCreatedObjectUndo(creatureRoot, "Undo creature creation.");
-            
+
             if (creatureMesh.scene.IsValid())
                 SceneManager.MoveGameObjectToScene(creatureRoot, creatureMesh.scene);
 
@@ -86,6 +86,12 @@ namespace ThunderRoad
             creature.data = CreateCreatureData(config, creatureRoot.transform.Find("Ragdoll/Parts"));
             CreateHandPoses(config, creature, creature.data.name, creatureTemplate.GetComponent<Creature>());
 
+            if (config.createWave)
+            {
+                CreateWaveData(config);
+                CreateCreatureTable(config);
+            }
+
             // Unload template and set selected object to new creature game object
             PrefabUtility.UnloadPrefabContents(creatureTemplate);
             Selection.activeGameObject = creatureRoot;
@@ -99,12 +105,6 @@ namespace ThunderRoad
             entry.address = creature.data.prefabAddress;
             entry.SetLabel("Windows", true);
             entry.SetLabel("Android", true);
-
-            // Save CreatureData json
-            string creatureDataJson = JsonConvert.SerializeObject(creature.data, Catalog.jsonSerializerSettings);
-            File.WriteAllText(config.JsonPathAbsolute, creatureDataJson);
-            // Generate meta file for json (so it shows up in UnityEditor)
-            AssetDatabase.ImportAsset(Path.Combine("Assets", config.JsonPath));
 
             return prefab;
         }
@@ -279,6 +279,71 @@ namespace ThunderRoad
 
             Catalog.GetCategoryData(Category.Creature).AddCatalogData(data);
 
+            // Save CreatureData json
+            string creatureDataJson = JsonConvert.SerializeObject(data, Catalog.jsonSerializerSettings);
+            File.WriteAllText(config.JsonPathAbsolute, creatureDataJson);
+
+            return data;
+        }
+
+        public static WaveData CreateWaveData(CreatureCreatorConfig config)
+        {
+            WaveData data = new()
+            {
+                id = config.id,
+                title = config.id,
+                loopBehavior = WaveData.LoopBehavior.LoopSeamless,
+                totalMaxAlive = 1,
+                alwaysAvailable = true,
+                factions = new List<WaveData.WaveFaction>()
+                {
+                    new WaveData.WaveFaction()
+                    {
+                        factionID = 0, // default aggressive faction
+                        factionMaxAlive = 1
+                    }
+                },
+                groups = new List<WaveData.Group>()
+                {
+                    new WaveData.Group()
+                    {
+                        reference = WaveData.Group.Reference.Table,
+                        referenceID = config.id,
+                        minMaxCount = new Vector2Int(1, 2)
+                    }
+                }
+            };
+            data.version = data.GetCurrentVersion();
+
+            Catalog.GetCategoryData(Category.Wave).AddCatalogData(data);
+
+            string json = JsonConvert.SerializeObject(data, Catalog.jsonSerializerSettings);
+            File.WriteAllText(config.WaveJsonPathAbsolute, json);
+
+            return data;
+        }
+
+        public static CreatureTable CreateCreatureTable(CreatureCreatorConfig config)
+        {
+            CreatureTable data = new()
+            {
+                id = config.id,
+                drops = new List<CreatureTable.Drop> { 
+                    new CreatureTable.Drop()
+                    {
+                        reference = CreatureTable.Drop.Reference.Creature,
+                        referenceID = config.id,
+                        probabilityWeights = new int[5] { 1, 0, 0, 0, 0 }
+                    }
+                }
+            };
+            data.version = data.GetCurrentVersion();
+
+            Catalog.GetCategoryData(Category.CreatureTable).AddCatalogData(data);
+
+            string json = JsonConvert.SerializeObject(data, Catalog.jsonSerializerSettings);
+            File.WriteAllText(config.CreatureTableJsonPathAbsolute, json);
+
             return data;
         }
 
@@ -316,7 +381,6 @@ namespace ThunderRoad
 
             MethodInfo saveFingerMethod = typeof(RagdollHandPoser).GetMethod("SaveFinger", BindingFlags.NonPublic | BindingFlags.Instance);
 
-            string assetSaveFolder = Path.Combine("Assets", config.HandPoseJsonPath);
             if (!Directory.Exists(config.HandPoseJsonPathAboslute))
                 Directory.CreateDirectory(config.HandPoseJsonPathAboslute);
 
@@ -390,7 +454,6 @@ namespace ThunderRoad
                     string jsonString = JsonConvert.SerializeObject(poseDataCopy, Catalog.jsonSerializerSettings);
                     string fileName = $"HandPose_{poseDataCopy.id}.json";
                     File.WriteAllText(Path.Combine(config.HandPoseJsonPathAboslute, fileName), jsonString);
-                    AssetDatabase.ImportAsset(Path.Combine(assetSaveFolder, fileName));
                 }
             }
             finally

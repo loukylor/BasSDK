@@ -16,6 +16,9 @@ namespace ThunderRoad
         public string id;
         public AddressableAssetGroup addressableAssetGroup;
 
+        [Tooltip("Whether to automatically create a wave where this creature will spawn")]
+        public bool createWave = true;
+
         // False by default because eye components need additional setup that cannot be done automatically
         public bool addEyeComponents;
         public string animatorAddress = "Animation.Controller.Human";
@@ -23,10 +26,14 @@ namespace ThunderRoad
         public string name;
         public string GetActualName => hasSeparateNameAndID ? name : id;
 
-        public string JsonPath => Path.Combine(saveLocation, $"Creature_{id}.json");
-        public string JsonPathAbsolute => Path.Combine(FileManager.GetFullPath(FileManager.Type.JSONCatalog, FileManager.Source.Mods), JsonPath);
-        public string HandPoseJsonPath => Path.Combine(saveLocation, "HandPoses");
-        public string HandPoseJsonPathAboslute => Path.Combine(FileManager.GetFullPath(FileManager.Type.JSONCatalog, FileManager.Source.Mods), HandPoseJsonPath);
+        public string JsonFolderPathAbsolute => Path.Combine(FileManager.GetFullPath(FileManager.Type.JSONCatalog, FileManager.Source.Mods), saveLocation);
+        public string JsonName => $"Creature_{id}.json";
+        public string JsonPathAbsolute => Path.Combine(JsonFolderPathAbsolute, JsonName);
+        public string HandPoseJsonPathAboslute => Path.Combine(JsonFolderPathAbsolute, "HandPoses");
+        public string WaveJsonName => $"Wave_{id}.json";
+        public string WaveJsonPathAbsolute => Path.Combine(JsonFolderPathAbsolute, WaveJsonName);
+        public string CreatureTableJsonName => $"CreatureTable_{id}.json";
+        public string CreatureTableJsonPathAbsolute => Path.Combine(JsonFolderPathAbsolute, CreatureTableJsonName);
         public string PrefabPathAbsolute => Path.Combine(Application.dataPath, saveLocation, $"{id}.prefab");
 
         public void ReportErrors(List<Error> errors)
