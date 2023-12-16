@@ -77,6 +77,14 @@ namespace ThunderRoad
                     continue;
                 }
 
+                // If upper chest is null and we're doing chest right now, then
+                // skip so that chest is treated as upper chest
+                if (animator.GetBoneTransform(HumanBodyBones.UpperChest) == null
+                    && templatePart.meshBone == templateAnimator.GetBoneTransform(HumanBodyBones.Chest))
+                {
+                    continue;
+                }
+
                 // TODO: Prevent meshes with duplicate bone names
                 if (bone == null || partsTransform.Find(bone.name) != null)
                     continue;
@@ -436,7 +444,6 @@ namespace ThunderRoad
 
             if (boneTransform != null)
                 return boneTransform;
-
 
             switch (bone)
             {
