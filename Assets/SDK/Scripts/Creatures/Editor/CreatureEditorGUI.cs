@@ -16,6 +16,8 @@ namespace ThunderRoad
         public bool IsValid => !errors.Any(error => error.level == MessageType.Error);
 
         public GameObject creatureRoot;
+        public bool IsCreature => creatureRoot != null 
+            && creatureRoot.GetComponent<Creature>() != null;
 
         public CreatureCreatorConfig creatorConfig;
         public SerializedObject serializedObj;
@@ -78,7 +80,7 @@ namespace ThunderRoad
                 errors.Clear();
                 using (new EditorGUI.DisabledGroupScope(creatureRoot == null))
                 {
-                    if (creatureRoot != null && creatureRoot.GetComponent<Creature>() != null)
+                    if (IsCreature)
                         OnEdit();
                     else
                         OnCreate();
@@ -224,27 +226,31 @@ namespace ThunderRoad
 
                 for (int i = 0; i < renderer.sharedMaterials.Length; i++)
                 {
-                    if (!renderer.sharedMaterials[i].HasTexture("_RevealMask"))
+                    if (renderer.sharedMaterials[i] != null && !renderer.sharedMaterials[i].HasTexture("_RevealMask"))
                     {
-                        // TODO: I have no idea why but this just doesn't set materials properly on prefabs
                         int j = i;
+                        SkinnedMeshRenderer loopedRenderer = renderer;
+                        void autoFix()
+                        {
+                            using EditPrefabScope<SkinnedMeshRenderer> scope = new(loopedRenderer);
+                            Material[] newMats = scope.item.sharedMaterials;
+                            Material newMat = new(Shader.Find("ThunderRoad/Lit"));
+                            Material oldMat = newMats[j];
+                            newMat.CopyPropertiesFromMaterial(oldMat);
+                            newMats[j] = newMat;
+
+                            string path = Path.Combine(
+                                "Assets",
+                                creatorConfig.saveLocation,
+                                oldMat.name + ".mat"
+                            );
+                            AssetDatabase.CreateAsset(newMat, path);
+                            scope.item.sharedMaterials = newMats;
+                        }
                         errors.Add(new Error(
                             MessageType.Warning,
                             $"Material \"{renderer.sharedMaterials[i].name}\" does not have a \"_RevealMask\" property. Without it, decals will not function. If unsure how to fix, use the \"ThunderRoad/Lit\" shader on your materials.",
-                            () => {
-                                Material[] newMats = renderer.sharedMaterials;
-                                Material newMat = new(Shader.Find("ThunderRoad/Lit"));
-                                newMat.CopyPropertiesFromMaterial(renderer.sharedMaterials[j]);
-                                newMats[j] = newMat;
-
-                                string path = Path.Combine(
-                                    "Assets", 
-                                    creatorConfig.saveLocation, 
-                                    renderer.sharedMaterials[j].name + ".mat"
-                                );
-                                AssetDatabase.CreateAsset(newMat, path);
-                                renderer.sharedMaterials = newMats;
-                            }
+                            IsCreature ? autoFix : null
                         ));
                     }
                 }
@@ -374,6 +380,48 @@ namespace ThunderRoad
                 this.level = level;
                 this.message = message;
                 this.autoFix = autoFix;
+            }
+        }
+
+        public readonly struct EditPrefabScope<T> : IDisposable where T : Component
+        {
+            public readonly T item;
+            private readonly PrefabUtility.EditPrefabContentsScope? scope;
+
+            public EditPrefabScope(T item) {
+                Undo.RecordObject(item, "Edit prefab");
+                if (PrefabUtility.IsPartOfAnyPrefab(item))
+                {
+                    // Get path of the prefab asset item belongs to
+                    string path = PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(item);
+
+                    // Get path of item's transform from the prefab root
+                    string componentPath = item.gameObject.GetPathFromRoot();
+                    
+                    // Load the prefab contents
+                    scope = new PrefabUtility.EditPrefabContentsScope(path);
+                    componentPath = componentPath[(2 + scope.Value.prefabContentsRoot.name.Length)..];
+
+                    // Find the component that corresponds with item on the prefab
+                    int componentIndex = Array.IndexOf(item.transform.GetComponents<T>(), item);
+                    this.item = scope.Value.prefabContentsRoot.transform.Find(componentPath)
+                        .GetComponents<T>()[componentIndex];
+                }
+                else
+                {
+                    this.item = item;
+                    scope = null;
+                }
+            }
+
+            public void Dispose()
+            {
+                if (scope != null)
+                {
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(item);
+                    // Save the new modified prefab and unload it
+                    scope.Value.Dispose();
+                }
             }
         }
     }
