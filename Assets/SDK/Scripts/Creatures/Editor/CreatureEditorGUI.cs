@@ -353,6 +353,14 @@ namespace ThunderRoad
                     () => CreatureCreator.AddClimberComponents(creatureRoot)));
             }
 
+            if (creature.allEyes.Any(eye => eye == null))
+            {
+                errors.Add(new Error(
+                    MessageType.Error,
+                    "One or more eyes on the creature are null."
+                ));
+            }
+
             ValidateCreatureCommon();
         }
 

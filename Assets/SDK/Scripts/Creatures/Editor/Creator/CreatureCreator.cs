@@ -39,14 +39,6 @@ namespace ThunderRoad
             // Copy various GameObjects from TestChar prefab
             GameObject creatureTemplate = PrefabUtility.LoadPrefabContents("Assets/SDK/Examples/Characters/TestChar.prefab");
 
-            // Make the custom creature copy the pose of the template
-            Transform templateMeshRoot = creatureTemplate.transform.Find("Mesh");
-            HumanPose pose = new();
-            using (HumanPoseHandler poseHandler = new(templateMeshRoot.GetComponent<Animator>().avatar, templateMeshRoot))
-                poseHandler.GetHumanPose(ref pose);
-            using (HumanPoseHandler poseHandler = new(creatureAnimator.avatar, creatureMesh.transform))
-                poseHandler.SetHumanPose(ref pose);
-
             // Add Rig between mesh and hips
             Transform hips = creatureAnimator.GetBoneTransform(HumanBodyBones.Hips);
             if (hips.parent == creatureMesh)
@@ -76,8 +68,18 @@ namespace ThunderRoad
             // only on the left hand of both the human male and female
             // creatures that is references nowhere in code. I imagine its not
             // supposed to be there.
-            List<CreatureEye> eyes = AddEyeComponents(creatureAnimator);
+            List<CreatureEye> eyes = AddEyeComponents(creatureAnimator, config);
             AddMeshComponents(creatureRoot);
+
+            // Make the custom creature copy the pose of the template
+            // This will greatly improve the accuracy of the ragdoll
+            Transform templateMeshRoot = creatureTemplate.transform.Find("Mesh");
+            HumanPose pose = new();
+            using (HumanPoseHandler poseHandler = new(templateMeshRoot.GetComponent<Animator>().avatar, templateMeshRoot))
+                poseHandler.GetHumanPose(ref pose);
+            using (HumanPoseHandler poseHandler = new(creatureAnimator.avatar, creatureMesh.transform))
+                poseHandler.SetHumanPose(ref pose);
+
             new CreatureRagdollCreator(creatureRoot, creatureAnimator, creatureTemplate).CreateRagdoll();
             Creature creature = AddRootComponents(creatureRoot, creatureAnimator, eyes, config);
             // Only container components needs to be called to assign the created container to 
@@ -181,36 +183,68 @@ namespace ThunderRoad
             climberParent.gameObject.TryGetOrAddComponent<FeetClimber>(out _);
         }
 
-        public static List<CreatureEye> AddEyeComponents(Animator animator)
+        public static List<CreatureEye> AddEyeComponents(Animator animator, CreatureCreatorConfig config)
         {
             List<CreatureEye> res = new();
 
-            Transform eye = animator.GetBoneTransform(HumanBodyBones.LeftEye);
+            CreatureEye eye = AddEyeComponent(animator, HumanBodyBones.LeftEye);
             if (eye != null)
-            {
-                CreatureEye eyeComponent = eye.gameObject.AddComponent<CreatureEye>();
-                eyeComponent.eyeTag = "Left";
-                res.Add(eyeComponent);
+                res.Add(eye);
 
-                Transform forwardTransform = new GameObject("ForwardTransform").transform;
-                forwardTransform.position = eye.position;
-                forwardTransform.parent = eye;
-                forwardTransform.rotation = animator.transform.rotation;
+            eye = AddEyeComponent(animator, HumanBodyBones.RightEye);
+            if (eye != null)
+                res.Add(eye);
+
+            if (res.Count > 0)
+            {
+                HumanDescription description = animator.avatar.humanDescription;
+                Transform[] bones = animator.gameObject.GetComponentsInChildren<Transform>();
+                SkeletonBone[] newSkeleton = new SkeletonBone[bones.Length];
+                for (int i = 0; i < bones.Length; i++)
+                {
+                    newSkeleton[i] = new()
+                    {
+                        name = bones[i].transform.name,
+                        position = bones[i].transform.localPosition,
+                        rotation = bones[i].transform.localRotation,
+                        scale = bones[i].transform.localScale
+                    };
+                }
+                description.skeleton = newSkeleton;
+                Avatar newAvatar = AvatarBuilder.BuildHumanAvatar(animator.gameObject, description);
+                animator.avatar = newAvatar;
+                AssetDatabase.CreateAsset(newAvatar, Path.Combine("Assets", config.saveLocation, config.id + "Avatar.asset"));
             }
 
-            eye = animator.GetBoneTransform(HumanBodyBones.RightEye);
-            if (eye != null)
-            {
-                CreatureEye eyeComponent = eye.gameObject.AddComponent<CreatureEye>();
-                eyeComponent.eyeTag = "Right";
-                res.Add(eyeComponent);
-
-                Transform forwardTransform = new GameObject("ForwardTransform").transform;
-                forwardTransform.position = eye.position;
-                forwardTransform.parent = eye;
-                forwardTransform.rotation = animator.transform.rotation;
-            }
             return res;
+        }
+
+        private static CreatureEye AddEyeComponent(Animator animator, HumanBodyBones eye)
+        {
+            Transform eyeTransform = animator.GetBoneTransform(eye);
+            if (eyeTransform == null)
+            {
+                return null;
+            }
+
+            CreatureEye eyeComponent = eyeTransform.gameObject.AddComponent<CreatureEye>();
+            eyeComponent.eyeTag = eye == HumanBodyBones.LeftEye ? "Left" : "Right";
+
+            Transform forwardTransform = new GameObject("ForwardTransform").transform;
+            forwardTransform.position = eyeTransform.position;
+            forwardTransform.parent = eyeTransform;
+            forwardTransform.rotation = animator.transform.rotation;
+
+            if (eyeTransform.parent == animator.GetBoneTransform(HumanBodyBones.Head))
+            {
+                Transform eyeParent = new GameObject(eyeTransform.name + "Parent").transform;
+                eyeParent.position = eyeTransform.position;
+                eyeParent.parent = eyeTransform.parent;
+                eyeParent.rotation = eyeTransform.rotation;
+                eyeTransform.parent = eyeParent;
+            }
+
+            return eyeComponent;
         }
 
         public static CreatureData CreateCreatureData(CreatureCreatorConfig config, Transform ragdollPartsRoot)
