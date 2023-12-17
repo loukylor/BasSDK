@@ -18,6 +18,7 @@ namespace ThunderRoad
 
         [Tooltip("Whether to automatically create a wave where this creature will spawn")]
         public bool createWave = true;
+        public CreatureData.Gender gender;
 
         // False by default because eye components need additional setup that cannot be done automatically
         public bool addEyeComponents;

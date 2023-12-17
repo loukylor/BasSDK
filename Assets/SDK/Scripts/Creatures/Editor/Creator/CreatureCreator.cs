@@ -219,8 +219,20 @@ namespace ThunderRoad
             {
                 name = config.GetActualName,
                 id = config.id,
+                pooledCount = 20,
+                androidPooledCount = 5,
                 prefabAddress = $"{config.addressableAssetGroup.Name}.Creature.{config.id}",
                 animatorBundleAddress = config.animatorAddress,
+                gender = config.gender,
+                containerID = "Gladiator1H",
+                brainId = "HumanMedium",
+                jumpEffectId = "Jump",
+                kickEffectId = "Kick",
+                playerFallDamageEffectId = "Fall",
+                voices = new List<string>()
+                {
+                    config.gender == CreatureData.Gender.Male ? "HumanMale1" : "HumanFemale3"
+                },
                 ragdollData = new CreatureData.RagdollData()
                 {
                     gripEffectId = "GripAndGrab",
@@ -233,7 +245,8 @@ namespace ThunderRoad
                 expressionPainId = "Pain",
                 expressionDeathId = "Death",
                 expressionChokeId = "Choke",
-                expressionAngryId = "Angry"
+                expressionAngryId = "Angry",
+                eyeClips = Catalog.GetData<CreatureData>("HumanMale").eyeClips
             };
             data.version = data.GetCurrentVersion();
 
