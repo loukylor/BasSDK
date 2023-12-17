@@ -189,7 +189,7 @@ namespace ThunderRoad
                     {
                         errors.Add(new Error(
                             MessageType.Warning,
-                            "One or more eye is missing from animator rig. Without both, the console will spew errors while the creature is being held using the force spell. They can be a dummy bones."));
+                            "One or more eye is missing from animator rig. Without both, the console will spew errors while the creature. They can be a dummy bones."));
                     }
                 }
 
@@ -240,6 +240,7 @@ namespace ThunderRoad
                             Material newMat = new(Shader.Find("ThunderRoad/Lit"));
                             Material oldMat = newMats[j];
                             newMat.CopyPropertiesFromMaterial(oldMat);
+                            newMat.renderQueue = 2100;
                             newMats[j] = newMat;
 
                             string path = Path.Combine(
