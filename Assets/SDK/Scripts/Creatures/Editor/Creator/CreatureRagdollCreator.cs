@@ -9,6 +9,9 @@ namespace ThunderRoad
 {
     public class CreatureRagdollCreator
     {
+        private static readonly FieldInfo upAxisField = typeof(RagdollPart).GetField("upAxis", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo frontAxisField = typeof(RagdollPart).GetField("frontAxis", BindingFlags.Instance | BindingFlags.NonPublic);
+
         public readonly GameObject creatureRoot;
         public readonly Animator animator;
         public readonly GameObject template;
@@ -98,7 +101,11 @@ namespace ThunderRoad
                 part.SetPositionToBone();
                 Matrix4x4 templateToPartMatrix = partGO.transform.worldToLocalMatrix * templatePartTransform.localToWorldMatrix;
                 part.boneToChildDirection = GetAsLongestAxis(templateToPartMatrix.MultiplyVector(part.boneToChildDirection));
-                // TODO: Check if bone to child direction matters
+                // TODO: Check if bone to child direction matters // I don't think it does, the template char doesn't really set it
+                
+                // Not sure why these are private but w/e
+                frontAxisField.SetValue(part, GetClosestAxis(part.transform, Vector3.forward));
+                upAxisField.SetValue(part, GetClosestAxis(part.transform, Vector3.up));
 
                 CharacterJoint joint = partGO.GetComponent<CharacterJoint>();
                 if (joint != null)
@@ -483,6 +490,50 @@ namespace ThunderRoad
             Vector3 result = Vector3.zero;
             result[axis] = Mathf.Sign(vector[axis]);
             return result;
+        }
+
+        private static RagdollPart.Axis GetClosestAxis(Transform transform, Vector3 direction)
+        {
+            Quaternion quat = Quaternion.Euler(direction);
+            RagdollPart.Axis res = RagdollPart.Axis.Forwards;
+            float minAngle = Quaternion.Angle(Quaternion.Euler(transform.forward), quat);
+
+            float angle = Quaternion.Angle(Quaternion.Euler(-transform.forward), quat);
+            if (angle < minAngle)
+            {
+                res = RagdollPart.Axis.Backwards;
+                minAngle = angle;
+            }
+
+            angle = Quaternion.Angle(Quaternion.Euler(transform.right), quat);
+            if (angle < minAngle)
+            {
+                res = RagdollPart.Axis.Right;
+                minAngle = angle;
+            }
+
+            angle = Quaternion.Angle(Quaternion.Euler(-transform.right), quat);
+            if (angle < minAngle)
+            {
+                res = RagdollPart.Axis.Left;
+                minAngle = angle;
+            }
+
+            angle = Quaternion.Angle(Quaternion.Euler(transform.up), quat);
+            if (angle < minAngle)
+            {
+                res = RagdollPart.Axis.Up;
+                minAngle = angle;
+            }
+
+            angle = Quaternion.Angle(Quaternion.Euler(-transform.up), quat);
+            if (angle < minAngle)
+            {
+                res = RagdollPart.Axis.Down;
+                minAngle = angle;
+            }
+
+            return res;
         }
     }
 }
