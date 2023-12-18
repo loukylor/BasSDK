@@ -82,8 +82,10 @@ namespace ThunderRoad
 
                 // If upper chest is null and we're doing chest right now, then
                 // skip so that chest is treated as upper chest
-                if (animator.GetBoneTransform(HumanBodyBones.UpperChest) == null
+                if ((animator.GetBoneTransform(HumanBodyBones.UpperChest) == null
                     && templatePart.meshBone == templateAnimator.GetBoneTransform(HumanBodyBones.Chest))
+                    || (animator.GetBoneTransform(HumanBodyBones.Neck) == null
+                    && templatePart.meshBone == templateAnimator.GetBoneTransform(HumanBodyBones.Neck)))
                 {
                     continue;
                 }
