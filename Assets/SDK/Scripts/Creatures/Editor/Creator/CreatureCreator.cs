@@ -68,7 +68,9 @@ namespace ThunderRoad
             // only on the left hand of both the human male and female
             // creatures that is references nowhere in code. I imagine its not
             // supposed to be there.
-            List<CreatureEye> eyes = AddEyeComponents(creatureAnimator, config);
+            List<CreatureEye> eyes = config.addEyeComponents
+                ? AddEyeComponents(creatureAnimator, config)
+                : new List<CreatureEye>();
             AddMeshComponents(creatureRoot);
 
             // Make the custom creature copy the pose of the template
