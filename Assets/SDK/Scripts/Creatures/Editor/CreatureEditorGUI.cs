@@ -216,7 +216,8 @@ namespace ThunderRoad
                     errors.Add(new Error(
                         MessageType.Error,
                         $"Mesh \"{renderer.sharedMesh.name}\" is not marked as readable. Please change it in import settings.",
-                        () => {
+                        () => 
+                        {
                             string meshPath = AssetDatabase.GetAssetPath(renderer.sharedMesh);
                             ModelImporter importer = AssetImporter.GetAtPath(meshPath) as ModelImporter;
                             importer.isReadable = true;

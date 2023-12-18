@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
@@ -188,31 +189,41 @@ namespace ThunderRoad
         public static List<CreatureEye> AddEyeComponents(Animator animator, CreatureCreatorConfig config)
         {
             List<CreatureEye> res = new();
+            HumanDescription description = animator.avatar.humanDescription;
+            // There's an internal value that needs to be reset, to just create
+            // new bones with the same public values
+            List<SkeletonBone> newSkeleton = description.skeleton.Select(bone => new SkeletonBone()
+            {
+                name = bone.name,
+                position = bone.position,
+                rotation = bone.rotation,
+                scale = bone.scale
+            }).ToList();
 
-            CreatureEye eye = AddEyeComponent(animator, HumanBodyBones.LeftEye);
+            CreatureEye eye = AddEyeComponent(animator, HumanBodyBones.LeftEye, newSkeleton);
             if (eye != null)
                 res.Add(eye);
 
-            eye = AddEyeComponent(animator, HumanBodyBones.RightEye);
+            eye = AddEyeComponent(animator, HumanBodyBones.RightEye, newSkeleton);
             if (eye != null)
                 res.Add(eye);
 
             if (res.Count > 0)
             {
-                HumanDescription description = animator.avatar.humanDescription;
-                Transform[] bones = animator.gameObject.GetComponentsInChildren<Transform>();
-                SkeletonBone[] newSkeleton = new SkeletonBone[bones.Length];
-                for (int i = 0; i < bones.Length; i++)
+                // If any bones have been added, create a new avatar with the
+                // new bone list
+
+                // Make sure animator's gameobject name is changed 
+                newSkeleton[0] = new SkeletonBone()
                 {
-                    newSkeleton[i] = new()
-                    {
-                        name = bones[i].transform.name,
-                        position = bones[i].transform.localPosition,
-                        rotation = bones[i].transform.localRotation,
-                        scale = bones[i].transform.localScale
-                    };
-                }
-                description.skeleton = newSkeleton;
+                    name = animator.transform.name,
+                    position = newSkeleton[0].position,
+                    rotation = newSkeleton[0].rotation,
+                    scale = newSkeleton[0].scale
+                };
+
+                description.skeleton = newSkeleton.ToArray();
+
                 Avatar newAvatar = AvatarBuilder.BuildHumanAvatar(animator.gameObject, description);
                 animator.avatar = newAvatar;
                 AssetDatabase.CreateAsset(newAvatar, Path.Combine("Assets", config.saveLocation, config.id + "Avatar.asset"));
@@ -221,7 +232,7 @@ namespace ThunderRoad
             return res;
         }
 
-        private static CreatureEye AddEyeComponent(Animator animator, HumanBodyBones eye)
+        private static CreatureEye AddEyeComponent(Animator animator, HumanBodyBones eye, List<SkeletonBone> bones)
         {
             Transform eyeTransform = animator.GetBoneTransform(eye);
             if (eyeTransform == null)
@@ -231,11 +242,16 @@ namespace ThunderRoad
 
             CreatureEye eyeComponent = eyeTransform.gameObject.AddComponent<CreatureEye>();
             eyeComponent.eyeTag = eye == HumanBodyBones.LeftEye ? "Left" : "Right";
+            int eyeIndex = bones.FindIndex(bone => bone.name == eyeTransform.name);
 
             Transform forwardTransform = new GameObject("ForwardTransform").transform;
             forwardTransform.position = eyeTransform.position;
             forwardTransform.parent = eyeTransform;
             forwardTransform.rotation = animator.transform.rotation;
+            
+            // Since we're adding a bone to the skeleton, make sure its added to
+            // the bone list 
+            bones.Insert(eyeIndex + 1, ToSkeletonBone(forwardTransform));
 
             if (eyeTransform.parent == animator.GetBoneTransform(HumanBodyBones.Head))
             {
@@ -244,6 +260,12 @@ namespace ThunderRoad
                 eyeParent.parent = eyeTransform.parent;
                 eyeParent.rotation = eyeTransform.rotation;
                 eyeTransform.parent = eyeParent;
+                eyeTransform.localPosition = Vector3.zero;
+
+                // We're modifying the local position of the eye transform, so
+                // add it to the bone list
+                bones[eyeIndex] = ToSkeletonBone(eyeTransform);
+                bones.Insert(eyeIndex, ToSkeletonBone(eyeParent));
             }
 
             return eyeComponent;
@@ -568,5 +590,13 @@ namespace ThunderRoad
                 Common.CloneComponent(component, dest);
             }
         }
+
+        private static SkeletonBone ToSkeletonBone(Transform transform) => new()
+        {
+            name = transform.name,
+            position = transform.localPosition,
+            rotation = transform.localRotation,
+            scale = transform.localScale
+        };
     }
 }
