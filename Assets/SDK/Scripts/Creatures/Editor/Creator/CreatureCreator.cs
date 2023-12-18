@@ -330,6 +330,7 @@ namespace ThunderRoad
 
             // Save CreatureData json
             string creatureDataJson = JsonConvert.SerializeObject(data, Catalog.jsonSerializerSettings);
+            new FileInfo(config.JsonPathAbsolute).Directory.Create();
             File.WriteAllText(config.JsonPathAbsolute, creatureDataJson);
 
             return data;
@@ -367,6 +368,7 @@ namespace ThunderRoad
             Catalog.GetCategoryData(Category.Wave).AddCatalogData(data);
 
             string json = JsonConvert.SerializeObject(data, Catalog.jsonSerializerSettings);
+            new FileInfo(config.WaveJsonPathAbsolute).Directory.Create();
             File.WriteAllText(config.WaveJsonPathAbsolute, json);
 
             return data;
@@ -391,6 +393,7 @@ namespace ThunderRoad
             Catalog.GetCategoryData(Category.CreatureTable).AddCatalogData(data);
 
             string json = JsonConvert.SerializeObject(data, Catalog.jsonSerializerSettings);
+            new FileInfo(config.CreatureTableJsonPathAbsolute).Directory.Create();
             File.WriteAllText(config.CreatureTableJsonPathAbsolute, json);
 
             return data;
@@ -502,6 +505,7 @@ namespace ThunderRoad
                     // Save pose
                     string jsonString = JsonConvert.SerializeObject(poseDataCopy, Catalog.jsonSerializerSettings);
                     string fileName = $"HandPose_{poseDataCopy.id}.json";
+                    new FileInfo(Path.Combine(config.HandPoseJsonPathAboslute, fileName)).Directory.Create();
                     File.WriteAllText(Path.Combine(config.HandPoseJsonPathAboslute, fileName), jsonString);
                 }
             }
